@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import HistoryPage from './pages/HistoryPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 
+
 // Composant pour protéger les routes privées
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -49,6 +50,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        
         <Route
           path="/profile"
           element={

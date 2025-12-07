@@ -1,12 +1,12 @@
 # Package models
-from .user import SystemUser
-from .temperature import TemperaturePrediction, IndoorTemperatureData
-from .mode import UserModeHistory
+from .user import User
+from .temperature import TemperaturePrediction,IndoorTemperatureData
+from .mode import mode
 
 __all__ = [
-    "SystemUser",
-    "TemperaturePrediction",
+    "user",
+    "Ttemperatureprediction",
     "IndoorTemperatureData",
-    "UserModeHistory"
+    "mode"
 ]
 

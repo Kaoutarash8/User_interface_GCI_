@@ -17,6 +17,10 @@ origins = [
     "http://localhost:8080",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    # Ajoutez l'origine de votre frontend
+    "http://localhost:8000",  # Pour tester directement
+    "http://127.0.0.1:8000",
+    # Si vous utilisez une autre adresse, ajoutez-la ici
 ]
 
 
@@ -51,13 +55,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configuration CORS
+# Configuration CORS PLUS PERMISSIVE
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # ⚠️ Changez à ["*"] pour le développement
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]  # Ajoutez cette ligne
 )
 
 # Inclusion des routes
@@ -99,6 +104,7 @@ if __name__ == "__main__":
     
     print(f"🌐 Démarrage du serveur sur http://{settings.HOST}:{settings.PORT}")
     print(f"📚 Documentation disponible sur http://{settings.HOST}:{settings.PORT}/docs")
+    print(f"🔧 CORS configuré pour autoriser toutes les origines (mode développement)")
     
     uvicorn.run(
         "main:app",
@@ -106,4 +112,3 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=True  # Rechargement automatique en développement
     )
-

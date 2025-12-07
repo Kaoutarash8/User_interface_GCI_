@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     DB_PORT: int = 3306
     DB_USER: str = "root"
     DB_PASSWORD: str = ""
-    DB_NAME: str = "smart_temperature_system"
+    DB_NAME: str = "SmartHomeDB"
     DATABASE_URL: Optional[str] = None  # Optionnel, sera construit automatiquement
     
     # Configuration serveur

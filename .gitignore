@@ -1,0 +1,18 @@
+# Python
+venv/
+**/__pycache__/
+*.pyc
+
+# FastAPI env
+backend/.env
+
+# Node / React
+frontendIOT/node_modules/
+frontendIOT/dist/
+
+# Logs
+*.log
+
+# OS trash
+.DS_Store
+Thumbs.db

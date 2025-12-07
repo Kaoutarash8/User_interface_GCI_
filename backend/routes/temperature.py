@@ -256,3 +256,5 @@ def get_24h_predictions(db: Session = Depends(get_db)):
             "data": [],
             "count": 0
         }
+    
+    

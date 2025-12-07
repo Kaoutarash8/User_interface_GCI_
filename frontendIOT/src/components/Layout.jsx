@@ -1,15 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationPanel from './NotificationPanel';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
+  };
+
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
   };
 
   return (
@@ -35,11 +41,30 @@ const Layout = ({ children }) => {
           >
             Profil
           </NavLink>
+          
+          <button 
+  onClick={toggleNotifications}
+  className="nav-link"
+  style={{
+    background: showNotifications ? 'var(--active-color)' : 'none', // Effet actif
+    border: 'none',
+    color: 'inherit',
+    font: 'inherit',
+    cursor: 'pointer',
+    padding: '8px 16px',
+    textDecoration: 'none',
+    borderRadius: '4px'
+  }}
+>
+  Notifications
+</button>
+          
           <button className="logout-btn" onClick={handleLogout}>
             Déconnexion
           </button>
         </nav>
       </header>
+
       <motion.main
         className="container"
         initial={{ opacity: 0, x: 40 }}
@@ -49,10 +74,13 @@ const Layout = ({ children }) => {
       >
         {children}
       </motion.main>
+
+      {/* Overlay notifications */}
+      {showNotifications && (
+        <NotificationPanel onClose={() => setShowNotifications(false)} />
+      )}
     </div>
   );
 };
 
 export default Layout;
-
-

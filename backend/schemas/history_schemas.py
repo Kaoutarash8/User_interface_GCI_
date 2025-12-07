@@ -11,7 +11,7 @@ class UserModeCreate(BaseModel):
     mode: int = Field(..., description="1 = AUTO, 0 = MANUEL", ge=0, le=1)
 
 
-class UserModeHistoryResponse(BaseModel):
+class modeResponse(BaseModel):
     """Schéma pour la réponse d'un historique de mode"""
     id: int
     mode: int

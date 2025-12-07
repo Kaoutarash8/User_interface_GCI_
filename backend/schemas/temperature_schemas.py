@@ -35,7 +35,7 @@ class TemperaturePredictionResponse(BaseModel):
     heater_level: Optional[int]
     fan_speed: Optional[int]
     comfort_temp: Optional[float]
-    created_at: datetime
+    # created_at: datetime
 
     class Config:
         from_attributes = True

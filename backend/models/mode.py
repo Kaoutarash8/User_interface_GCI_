@@ -7,14 +7,14 @@ from sqlalchemy.sql import func
 from database.database import Base
 
 
-class UserModeHistory(Base):
+class mode(Base):
     """
     Table user_mode_history : Historique des modes
     mode = 1 pour AUTO, mode = 0 pour MANUEL
     """
-    __tablename__ = "user_mode_history"
+    __tablename__ = "mode"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    mode = Column(Integer, nullable=False, comment="1 = AUTO | 0 = MANUEL")
-    selected_at = Column(TIMESTAMP, default=func.now(), index=True)
+    mode_value = Column(Integer, nullable=False, comment="1 = AUTO | 0 = MANUEL")
+    created_at = Column(TIMESTAMP, default=func.now(), index=True)
 

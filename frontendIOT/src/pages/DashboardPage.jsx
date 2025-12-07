@@ -38,6 +38,10 @@ const DashboardPage = () => {
   const [temperature24h, setTemperature24h] = useState([]);
   const [prediction24h, setPrediction24h] = useState([]);
   const [hourFilter, setHourFilter] = useState('all');
+  
+  // États pour contrôler l'affichage des sections
+  const [showGraphs, setShowGraphs] = useState(false);
+  const [showPredictionsTable, setShowPredictionsTable] = useState(false);
 
   // Charger les données du dashboard
   const loadDashboard = async () => {
@@ -95,7 +99,7 @@ const DashboardPage = () => {
     const autoLogin = async () => {
       const result = await login("admin123");
       if (result.success) {
-        console.log("✅ Connecté automatiquement");
+        console.log("Connecté automatiquement");
         loadDashboard();
       }
     };
@@ -157,6 +161,34 @@ const DashboardPage = () => {
     }
   }, [prediction24h, hourFilter]);
 
+  // Calculer les statistiques 24h
+  const stats24h = React.useMemo(() => {
+    if (temperature24h.length === 0) {
+      return {
+        maxTemp: null,
+        minTemp: null,
+        avgTemp: null,
+        heaterHours: 0,
+        fanHours: 0
+      };
+    }
+
+    const temps = temperature24h.map(item => item.temperature);
+    const maxTemp = Math.max(...temps);
+    const minTemp = Math.min(...temps);
+    const avgTemp = temps.reduce((sum, temp) => sum + temp, 0) / temps.length;
+    const heaterHours = temperature24h.filter(item => item.heater_level > 0).length;
+    const fanHours = temperature24h.filter(item => item.fan_level > 0).length;
+
+    return {
+      maxTemp,
+      minTemp,
+      avgTemp,
+      heaterHours,
+      fanHours
+    };
+  }, [temperature24h]);
+
   const adjustTemp = (delta) => {
     setTargetTemp((prev) => {
       const base = prev !== null ? prev : (comfortTemp !== null ? comfortTemp : 21.0);
@@ -170,24 +202,21 @@ const DashboardPage = () => {
       try {
         // Validation côté client
         if (targetTemp < 16 || targetTemp > 30) {
-          alert('❌ La température de confort doit être entre 16°C et 30°C');
+          alert('La température de confort doit être entre 16°C et 30°C');
           return;
         }
 
         const result = await setComfortTemp(targetTemp);
-        console.log('Réponse API:', result); // Debug
         
         if (result && result.success) {
           setComfortTemp(targetTemp);
-          alert(`✅ ${result.message}`);
-          // Recharger les données pour voir la mise à jour
+          alert(result.message);
           loadDashboard();
         } else {
-          alert('❌ Erreur lors de la sauvegarde: ' + (result?.message || 'Erreur inconnue'));
+          alert('Erreur lors de la sauvegarde: ' + (result?.message || 'Erreur inconnue'));
         }
       } catch (error) {
-        console.error('Erreur détaillée:', error); // Debug
-        alert('❌ Erreur lors de la sauvegarde: ' + (error.message || 'Erreur réseau'));
+        alert('Erreur lors de la sauvegarde: ' + (error.message || 'Erreur réseau'));
       }
     }
   };
@@ -223,22 +252,22 @@ const DashboardPage = () => {
           fan_level: fanLevel
         });
         if (result && result.success) {
-          alert('✅ Contrôles manuels sauvegardés');
+          alert('Contrôles manuels sauvegardés');
           loadDashboard();
         } else {
-          alert('❌ Erreur lors de la sauvegarde: ' + (result?.error || 'Erreur inconnue'));
+          alert('Erreur lors de la sauvegarde: ' + (result?.error || 'Erreur inconnue'));
         }
       } catch (error) {
-        alert('❌ Erreur lors de la sauvegarde: ' + error.message);
+        alert('Erreur lors de la sauvegarde: ' + error.message);
       }
     }
   };
 
-  // Préparer les données pour les graphiques - TOUTES LES 24 HEURES
+  // Préparer les données pour les graphiques
   const realChartLabels = temperature24h.length > 0
     ? temperature24h.map((item) => {
         const date = new Date(item.timestamp);
-        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        return `${date.getHours().toString().padStart(2, '0')}:00`;
       })
     : [];
 
@@ -256,18 +285,14 @@ const DashboardPage = () => {
     ]
   };
 
-  // CORRECTION : Préparer les données pour le graphique Prédiction vs Réel - 24 HEURES
-  // MAINTENANT AVEC adjusted_temp AU LIEU DE predicted_temp
   const predictionVsRealLabels = [];
   const realTemps = [];
   const adjustedTemps = [];
 
   if (prediction24h.length > 0 && temperature24h.length > 0) {
-    // Prendre TOUTES les 24 heures de données
     const realDataToUse = temperature24h;
     const predDataToUse = prediction24h;
     
-    // Utiliser le minimum entre les données disponibles (max 24)
     const minLength = Math.min(realDataToUse.length, predDataToUse.length, 24);
     
     for (let i = 0; i < minLength; i++) {
@@ -279,7 +304,6 @@ const DashboardPage = () => {
       
       predictionVsRealLabels.push(hourLabel);
       realTemps.push(realItem.temperature);
-      // CHANGEMENT IMPORTANT : utiliser adjusted_temp au lieu de predicted_temp
       adjustedTemps.push(predItem.adjusted_temp);
     }
   }
@@ -299,8 +323,8 @@ const DashboardPage = () => {
         pointBorderWidth: 2
       },
       {
-        label: 'Température Ajustée', // Changement du label
-        data: adjustedTemps, // Utilisation des températures ajustées
+        label: 'Température Ajustée',
+        data: adjustedTemps,
         borderColor: 'rgba(102, 126, 234, 1)',
         backgroundColor: 'rgba(102, 126, 234, 0.2)',
         tension: 0.4,
@@ -347,6 +371,29 @@ const DashboardPage = () => {
 
   return (
     <Layout>
+      {/* En-tête du tableau de bord */}
+      <motion.div
+        className="dashboard-header"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="header-content">
+          <h1>Tableau de Bord Climatique</h1>
+          <div className="header-info">
+            <div className="info-item">
+              <span className="info-label">Mode Actuel:</span>
+              <span className={`info-value ${mode === 'AUTO' ? 'mode-auto' : 'mode-manuel'}`}>
+                {mode}
+              </span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Dernière mise à jour:</span>
+              <span className="info-value">{lastUpdate || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Grille des statistiques en temps réel */}
       <div className="dashboard-grid">
         <motion.div
@@ -356,12 +403,12 @@ const DashboardPage = () => {
           transition={{ duration: 0.4 }}
         >
           <div className="card-header">
-            <div className="card-title">Température</div>
+            <div className="card-title">Température Actuelle</div>
           </div>
           <div className="data-value pulse">
             {loading ? '...' : currentTemp !== null ? `${currentTemp.toFixed(1)}°C` : 'N/A'}
           </div>
-          <div className="data-label">Intérieure actuelle</div>
+          <div className="data-label">Intérieure</div>
         </motion.div>
 
         <motion.div
@@ -377,7 +424,7 @@ const DashboardPage = () => {
             {heaterOn ? 'ON' : 'OFF'}
           </div>
           <div className="data-label">
-            Niveau: <span id="heater-level">{heaterLevel}</span>
+            Niveau: <span>{heaterLevel}</span>/5
           </div>
         </motion.div>
 
@@ -394,7 +441,7 @@ const DashboardPage = () => {
             {fanOn ? 'ON' : 'OFF'}
           </div>
           <div className="data-label">
-            Niveau: <span id="fan-level">{fanLevel}</span>
+            Niveau: <span>{fanLevel}</span>/5
           </div>
         </motion.div>
 
@@ -405,16 +452,54 @@ const DashboardPage = () => {
           transition={{ duration: 0.4, delay: 0.2 }}
         >
           <div className="card-header">
-            <div className="card-title">Mode</div>
+            <div className="card-title">Prédiction Prochaine Heure</div>
           </div>
-          <div className={`data-value ${mode === 'AUTO' ? 'mode-auto' : 'mode-manuel'}`}>
-            {mode}
+          <div className="data-value">
+            {loading ? '...' : prediction24h.length > 0 ? `${prediction24h[0]?.predicted_temp?.toFixed(1)}°C` : 'N/A'}
           </div>
           <div className="data-label">
-            Dernière mise à jour: <span>{lastUpdate || 'N/A'}</span>
+            Chauffage: Niv. {prediction24h.length > 0 ? prediction24h[0]?.heater_level || 0 : 0}
           </div>
         </motion.div>
       </div>
+
+      {/* Statistiques 24 heures */}
+      <motion.div
+        className="stats-24h"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <h3>Statistiques des 24 dernières heures</h3>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-number">
+              {loading ? '...' : stats24h.maxTemp !== null ? `${stats24h.maxTemp.toFixed(1)}°C` : 'N/A'}
+            </div>
+            <div className="stat-label">Température Maximum</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-number">
+              {loading ? '...' : stats24h.minTemp !== null ? `${stats24h.minTemp.toFixed(1)}°C` : 'N/A'}
+            </div>
+            <div className="stat-label">Température Minimum</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-number">
+              {loading ? '...' : stats24h.avgTemp !== null ? `${stats24h.avgTemp.toFixed(1)}°C` : 'N/A'}
+            </div>
+            <div className="stat-label">Température Moyenne</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-number">{stats24h.heaterHours}h</div>
+            <div className="stat-label">Chauffage Actif</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-number">{stats24h.fanHours}h</div>
+            <div className="stat-label">Ventilateur Actif</div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Contrôle de la température de confort */}
       <motion.div
@@ -510,157 +595,183 @@ const DashboardPage = () => {
               />
               <div>Niveau: <span>{fanLevel}</span></div>
             </div>
-           
+            <button className="save-btn" onClick={saveManualControls}>
+              Sauvegarder les contrôles
+            </button>
           </div>
         )}
       </motion.div>
 
-      {/* Tableau des prédictions intelligentes AVEC FILTRE HORAIRE */}
+      {/* Boutons pour afficher/masquer les sections détaillées */}
       <motion.div
-        className="ml-prediction"
+        className="section-toggle"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <div className="ml-header">
-          <h3>Prédictions Intelligentes - 24 prochaines heures</h3>
-          {/* Filtre horaire */}
-          <div className="hour-filter">
-            <label>Plage horaire:</label>
-            <select 
-              value={hourFilter} 
-              onChange={(e) => setHourFilter(e.target.value)}
-              style={{ 
-                padding: '0.5rem', 
-                borderRadius: '4px', 
-                border: '1px solid #d1adc7',
-                backgroundColor: '#f9f9f9'
-              }}
-            >
-              <option value="all">Toutes les heures</option>
-              <option value="current">Heure actuelle → 24h</option>
-              <option value="morning">Matin (6h-12h)</option>
-              <option value="afternoon">Après-midi (12h-18h)</option>
-              <option value="evening">Soir (18h-24h)</option>
-              <option value="night">Nuit (0h-6h)</option>
-            </select>
-          </div>
-        </div>
-        <table className="prediction-table">
-          <thead>
-            <tr>
-              <th>Heure</th>
-              <th>Température Prédite</th>
-              <th>Température Ajustée</th>
-              <th>Chauffage</th>
-              <th>Ventilateur</th>
-              <th>Niveau Chauffage</th>
-              <th>Niveau Ventilateur</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredPredictions.length === 0 ? (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
-                  {loading ? 'Chargement...' : 'Aucune donnée de prédiction disponible pour cette plage horaire'}
-                </td>
-              </tr>
-            ) : (
-              filteredPredictions.map((item, index) => {
-                const date = new Date(item.timestamp);
-                const hour = `${date.getHours().toString().padStart(2, '0')}:00`;
-                
-                return (
-                  <tr key={index}>
-                    <td>{hour}</td>
-                    <td>{item.predicted_temp !== null ? `${item.predicted_temp.toFixed(1)}°C` : 'N/A'}</td>
-                    <td>{item.adjusted_temp !== null ? `${item.adjusted_temp.toFixed(1)}°C` : 'N/A'}</td>
-                    <td>
-                      <span className={item.heater_level > 0 ? 'status-on' : 'status-off'}>
-                        {item.heater_level > 0 ? 'ON' : 'OFF'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={item.fan_speed > 0 ? 'status-on' : 'status-off'}>
-                        {item.fan_speed > 0 ? 'ON' : 'OFF'}
-                      </span>
-                    </td>
-                    <td>{item.heater_level || 0}</td>
-                    <td>{item.fan_speed || 0}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+        <button 
+          className={`toggle-btn ${showGraphs ? 'active' : ''}`}
+          onClick={() => setShowGraphs(!showGraphs)}
+        >
+          {showGraphs ? 'Masquer les Graphiques' : 'Afficher les Graphiques'}
+        </button>
+        <button 
+          className={`toggle-btn ${showPredictionsTable ? 'active' : ''}`}
+          onClick={() => setShowPredictionsTable(!showPredictionsTable)}
+        >
+          {showPredictionsTable ? 'Masquer les Prédictions Détaillées' : 'Afficher les Prédictions Détaillées'}
+        </button>
       </motion.div>
 
-      {/* Graphiques - 24 HEURES */}
-      <motion.div
-        className="charts-grid"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15 }}
-        style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '1fr 1fr', 
-          gap: '2rem',
-          marginTop: '2rem'
-        }}
-      >
-        <div 
-          className="chart-container" 
+      {/* Graphiques - Masqués par défaut */}
+      {showGraphs && (
+        <motion.div
+          className="charts-grid"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          transition={{ duration: 0.4 }}
           style={{ 
-            height: '400px',
-            background: 'white',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '2rem',
+            marginTop: '2rem'
           }}
         >
-          <h3>Température Réelle - 24 dernières heures</h3>
-          {temperature24h.length === 0 ? (
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '300px',
-              color: '#999'
-            }}>
-              {loading ? 'Chargement...' : 'Aucune donnée disponible'}
-            </div>
-          ) : (
-            <Line data={realChartData} options={chartOptions} />
-          )}
-        </div>
-        <div 
-          className="chart-container" 
-          style={{ 
-            height: '400px',
-            background: 'white',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-          }}
+          <div 
+            className="chart-container" 
+            style={{ 
+              height: '400px',
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <h3>Température Réelle - 24 dernières heures</h3>
+            {temperature24h.length === 0 ? (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                height: '300px',
+                color: '#999'
+              }}>
+                {loading ? 'Chargement...' : 'Aucune donnée disponible'}
+              </div>
+            ) : (
+              <Line data={realChartData} options={chartOptions} />
+            )}
+          </div>
+          <div 
+            className="chart-container" 
+            style={{ 
+              height: '400px',
+              background: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <h3>Réel vs Ajustée - 24 heures</h3>
+            {predictionVsRealLabels.length === 0 ? (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                height: '300px',
+                color: '#999'
+              }}>
+                {loading ? 'Chargement...' : 'Aucune donnée disponible pour la comparaison'}
+              </div>
+            ) : (
+              <Line data={predictionVsRealChartData} options={chartOptions} />
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tableau des prédictions - Masqué par défaut */}
+      {showPredictionsTable && (
+        <motion.div
+          className="ml-prediction"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          transition={{ duration: 0.4 }}
         >
-          <h3>Réel vs Ajustée - 24 heures</h3>
-          {predictionVsRealLabels.length === 0 ? (
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '300px',
-              color: '#999'
-            }}>
-              {loading ? 'Chargement...' : 'Aucune donnée disponible pour la comparaison'}
+          <div className="ml-header">
+            <h3>Prédictions Intelligentes - 24 prochaines heures</h3>
+            <div className="hour-filter">
+              <label>Plage horaire:</label>
+              <select 
+                value={hourFilter} 
+                onChange={(e) => setHourFilter(e.target.value)}
+                style={{ 
+                  padding: '0.5rem', 
+                  borderRadius: '4px', 
+                  border: '1px solid #d1adc7',
+                  backgroundColor: '#f9f9f9'
+                }}
+              >
+                <option value="all">Toutes les heures</option>
+                <option value="current">Heure actuelle → 24h</option>
+                <option value="morning">Matin (6h-12h)</option>
+                <option value="afternoon">Après-midi (12h-18h)</option>
+                <option value="evening">Soir (18h-24h)</option>
+                <option value="night">Nuit (0h-6h)</option>
+              </select>
             </div>
-          ) : (
-            <Line data={predictionVsRealChartData} options={chartOptions} />
-          )}
-        </div>
-      </motion.div>
+          </div>
+          <table className="prediction-table">
+            <thead>
+              <tr>
+                <th>Heure</th>
+                <th>Température Prédite</th>
+                <th>Température Ajustée</th>
+                <th>Chauffage</th>
+                <th>Ventilateur</th>
+                <th>Niveau Chauffage</th>
+                <th>Niveau Ventilateur</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPredictions.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+                    {loading ? 'Chargement...' : 'Aucune donnée de prédiction disponible pour cette plage horaire'}
+                  </td>
+                </tr>
+              ) : (
+                filteredPredictions.map((item, index) => {
+                  const date = new Date(item.timestamp);
+                  const hour = `${date.getHours().toString().padStart(2, '0')}:00`;
+                  
+                  return (
+                    <tr key={index}>
+                      <td>{hour}</td>
+                      <td>{item.predicted_temp !== null ? `${item.predicted_temp.toFixed(1)}°C` : 'N/A'}</td>
+                      <td>{item.adjusted_temp !== null ? `${item.adjusted_temp.toFixed(1)}°C` : 'N/A'}</td>
+                      <td>
+                        <span className={item.heater_level > 0 ? 'status-on' : 'status-off'}>
+                          {item.heater_level > 0 ? 'ON' : 'OFF'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={item.fan_speed > 0 ? 'status-on' : 'status-off'}>
+                          {item.fan_speed > 0 ? 'ON' : 'OFF'}
+                        </span>
+                      </td>
+                      <td>{item.heater_level || 0}</td>
+                      <td>{item.fan_speed || 0}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </motion.div>
+      )}
     </Layout>
-  );
+  );  
 };
 
 export default DashboardPage;

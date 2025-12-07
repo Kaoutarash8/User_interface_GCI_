@@ -7,7 +7,7 @@ from typing import Optional, List
 from database.database import get_db
 from schemas.history_schemas import (
     UserModeCreate,
-    UserModeHistoryResponse,
+    modeResponse,
     HistoryResponse
 )
 from services.history_service import (
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/history", tags=["History"])
 
 # ==================== MODE UTILISATEUR ====================
 
-@router.post("/mode", response_model=UserModeHistoryResponse)
+@router.post("/mode", response_model=modeResponse)
 def set_user_mode(
     mode_data: UserModeCreate,
     db: Session = Depends(get_db)
@@ -49,7 +49,7 @@ def get_current_user_mode(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/mode/all", response_model=List[UserModeHistoryResponse])
+@router.get("/mode/all", response_model=List[modeResponse])
 def get_user_mode_history(
     limit: int = 100,
     db: Session = Depends(get_db)
