@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
 
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -36,11 +38,18 @@ jobs:
           cd frontendIOT
           npm run build
 
+      - name: Verify build output
+        run: |
+          echo "Vérification des fichiers générés :"
+          ls -la frontendIOT/dist/
+          echo "Fichier index.html :"
+          cat frontendIOT/dist/index.html | head -5
+
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ZEALOUS_SKY_06BD8260F }}
           action: "upload"
-          app_location: "frontendIOT"
-          output_location: "dist"   # Très important
+          app_location: "frontendIOT"     # Où est votre code source
+          output_location: "dist"         # IMPORTANT : dossier relatif à app_location
           api_location: ""
