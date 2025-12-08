@@ -2,63 +2,30 @@ name: Azure Static Web Apps CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  build_and_deploy_job:
+  deploy:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
-
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '18'
 
-      - name: Install dependencies
+      - name: Install and Build
         working-directory: ./frontendIOT
         run: |
-          # Installation propre et vérifiée
-          npm ci --no-audit --legacy-peer-deps
-          
-          # VÉRIFICATION CRITIQUE : S'assurer que vite est installé
-          if [ ! -f "node_modules/.bin/vite" ]; then
-            echo "❌ Vite non trouvé, réinstallation..."
-            npm install vite@latest --no-save
-          fi
-          
-          # Donner les permissions d'exécution
-          chmod +x node_modules/.bin/*
+          npm ci
+          npm run build
 
-      - name: Build project (METHODE GARANTIE)
-        working-directory: ./frontendIOT
-        run: |
-          # Méthode 100% fiable - exécute vite directement depuis node_modules
-          ./node_modules/.bin/vite build
-          
-          # Alternative ultra-sûre :
-          # npx --no-install vite build
-
-      - name: Verify build
-        run: |
-          echo "✅ Vérification de la build..."
-          if [ -f "frontendIOT/dist/index.html" ]; then
-            echo "✅ Build réussie - index.html trouvé"
-            echo "Taille du dossier dist:"
-            du -sh frontendIOT/dist/
-          else
-            echo "❌ ERREUR : index.html non trouvé"
-            ls -la frontendIOT/dist/ 2>/dev/null || echo "Dossier dist non existant"
-            exit 1
-          fi
-
-      - name: Deploy to Azure Static Web Apps
+      - name: Deploy to Azure
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ZEALOUS_SKY_06BD8260F }}
+          # CHANGEMENT ICI : nouveau nom de secret simple
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "upload"
           app_location: "frontendIOT"
           output_location: "dist"
